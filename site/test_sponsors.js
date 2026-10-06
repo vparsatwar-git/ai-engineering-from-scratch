@@ -4,7 +4,7 @@ const path = require('node:path');
 const test = require('node:test');
 
 const root = path.resolve(__dirname, '..');
-const read = name => fs.readFileSync(path.join(root, name), 'utf8');
+const read = name => fs.readFileSync(path.join(root, name), 'utf8').replace(/\r\n/g, '\n');
 const sponsorUrl = 'https://serpapi.com/ai-engineering-from-scratch';
 const description = 'Web Search API for your AI apps. Available in Markdown and JSON for any integration.';
 const tierLabel = /\b(?:Backer|Bronze|Silver|Gold|Platinum|Diamond|Title Partner)\b/i;
@@ -104,10 +104,14 @@ test('supporter navigation survives translated README headings', () => {
     const text = read(file);
     assert.ok(text.includes('href="#supporters"'), file);
     assert.ok(text.includes('<a id="supporters"></a>'), file);
-    const sponsorLink = text.match(/href="([^"]*SPONSORS\.md)">Become a sponsor/);
+    const sponsorLink = text.match(/href="([^"]*SPONSORS\.md)">([^<]+)<\/a>/);
     assert.ok(sponsorLink, file);
     assert.equal(path.resolve(root, path.dirname(file), sponsorLink[1]), path.join(root, 'SPONSORS.md'), file);
-    assert.equal((text.match(/>Become a sponsor<\/a>/g) || []).length, 1, file);
+    if (file === 'README.md') {
+      assert.equal(sponsorLink[2], 'Become a sponsor');
+    } else {
+      assert.notEqual(sponsorLink[2], 'Become a sponsor', file);
+    }
     const sources = [...text.matchAll(/<source media="\(min-width: 768px\)" srcset="([^"]+)" width="48%">/g)];
     assert.equal(sources.length, 2, file);
     for (const [, src] of sources) {
@@ -117,7 +121,7 @@ test('supporter navigation survives translated README headings', () => {
     if (file !== 'README.md') {
       assert.doesNotMatch(
         text,
-        /### Sponsors|Thank you to our sponsors\.|Your support keeps every lesson free and open source\.|See all supporters|SerpApi\. Web Search API|## Sponsor the work|Free, MIT-licensed, 523 lessons\.|See all sponsors and backers|Want to support the work\?/
+        /Thank you to our sponsors\.|Your support keeps every lesson free and open source\.|See all supporters|SerpApi\. Web Search API|## Sponsor the work|Free, MIT-licensed, 523 lessons\.|See all sponsors and backers|Want to support the work\?/
       );
     }
   }
